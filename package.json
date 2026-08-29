@@ -1,7 +1,7 @@
 {
   "name": "@dotrino/verifier",
   "version": "0.1.0",
-  "description": "Protocolo de verificaci\u00f3n de identidad de Dotrino: prueba p\u00fablica bidireccional (estilo Keybase) + atestaci\u00f3n op:'verify' firmada por un verificador-tercero federado. Verificado \u2260 revelar.",
+  "description": "Protocolo de verificación de identidad de Dotrino: prueba pública bidireccional (estilo Keybase) + atestación op:'verify' firmada por un verificador-tercero federado. Verificado ≠ revelar.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -17,7 +17,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@dotrino/identity": "0.53.0"
+    "@dotrino/identity": "0.62.0"
   },
   "license": "MIT",
   "publishConfig": {
