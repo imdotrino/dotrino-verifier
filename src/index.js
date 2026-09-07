@@ -45,6 +45,22 @@ const decJson = (s) => JSON.parse(new TextDecoder().decode(unb64url(s)))
 // Solo servicios donde la URL de la prueba la controla únicamente el dueño del handle. X/LinkedIn
 // (scraping/ToS/login) quedan para después; aquí: web (dominio) y GitHub (repo perfil del usuario).
 export const SERVICES = {
+  /**
+   * EL DIRECTORIO DE UNA EMPRESA (Active Directory, Entra ID, un LDAP…).
+   *
+   * Es distinto de los demás y conviene entender por qué: en `web` y `github` la prueba es
+   * PÚBLICA y cualquiera puede bajarla —el verificador solo mira—. Aquí no hay nada que
+   * bajar: quien comprueba es el propio servicio de la empresa, hablando con su directorio,
+   * y lo que firma es el resultado de esa comprobación.
+   *
+   * De ahí salen dos diferencias: no tiene `urls` (no hay prueba que descargar) y su
+   * atestación dice `member`, no `controls` — afirma pertenencia, no control de un handle.
+   */
+  directory: {
+    label: 'Directorio de la empresa',
+    norm: (h) => String(h || '').trim().toLowerCase(),
+    urls: null
+  },
   web: {
     label: 'Sitio web',
     norm: (h) => String(h || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
@@ -120,11 +136,23 @@ export async function verifyProof ({ text, pubkey, service, handle }) {
  * `reveal:true` (opt-in) adjunta el handle público; por defecto NO se expone nada.
  * El objeto resultante entra tal cual en `@dotrino/reputation` (mismo formato de firma).
  */
-export async function signVerification ({ verifierKey, verifierPubkey, sub, service, handle, reveal = false, ttlMs = null, proofUrl = null }) {
+export async function signVerification ({ verifierKey, verifierPubkey, sub, service, handle, reveal = false, ttlMs = null, proofUrl = null, aud = null, claim = 'controls', claims = null }) {
   if (!SERVICES[service]) throw new Error('servicio no soportado: ' + service)
-  const att = { op: 'verify', iss: verifierPubkey, sub, ch: service, claim: 'controls', ts: Date.now() }
+  const att = { op: 'verify', iss: verifierPubkey, sub, ch: service, claim, ts: Date.now() }
+  // PARA QUIÉN vale. Sin destinatario, una atestación firmada para el chat de la empresa
+  // sirve igual ante cualquier otra aplicación que la acepte — el mismo agujero que se
+  // cerró en el resto del ecosistema (§destinatario).
+  if (aud) att.aud = String(aud).trim()
   if (ttlMs) att.exp = att.ts + ttlMs
   if (reveal) { att.reveal = { handle: normHandle(service, handle) }; if (proofUrl) att.reveal.proofUrl = proofUrl }
+  /**
+   * `claims` es el CONTENIDO de la atestación, y no es lo mismo que `reveal`.
+   *
+   * `reveal` es un opt-in del usuario para enseñar un handle que si no quedaría oculto —el
+   * badge prueba sin revelar—. Aquí es al revés: los grupos SON lo que la aplicación
+   * necesita para decidir a qué sala entras; sin ellos la atestación no sirve de nada.
+   */
+  if (claims && typeof claims === 'object') att.claims = claims
   const { signature } = await signWithDevice({ privateJwk: verifierKey, data: att })
   return { ...att, sig: signature }
 }
@@ -134,11 +162,18 @@ export async function signVerification ({ verifierKey, verifierPubkey, sub, serv
  * PESO/confianza NO se decide aquí: lo da `aggregateTrust(iss)` (la reputación del verificador).
  * @returns {Promise<{ ok:boolean, reason?:string }>}
  */
-export async function verifyVerification (att) {
+export async function verifyVerification (att, { audience = null, now = Date.now() } = {}) {
   if (!att || att.op !== 'verify' || typeof att.iss !== 'string' || typeof att.sub !== 'string' || typeof att.sig !== 'string') {
     return { ok: false, reason: 'forma inválida' }
   }
-  if (att.exp && Date.now() > att.exp) return { ok: false, reason: 'expirada' }
+  // Si la atestación DICE para quién es, quien la recibe tiene que ser ese. Y si él dice
+  // quién es y la atestación no lo dice, tampoco vale: aceptar una sin destinatario cuando
+  // se esperaba uno es justo el agujero que el destinatario viene a cerrar.
+  if (audience != null) {
+    if (typeof att.aud !== 'string' || !att.aud) return { ok: false, reason: 'sin destinatario' }
+    if (att.aud !== String(audience).trim()) return { ok: false, reason: 'otro destinatario' }
+  }
+  if (att.exp && now > att.exp) return { ok: false, reason: 'expirada' }
   const { sig, ...body } = att
   const ok = await verifyDeviceSig({ publickey: att.iss, data: body, signature: sig })
   return ok ? { ok: true } : { ok: false, reason: 'firma del verificador inválida' }

@@ -50,11 +50,30 @@ const ok = (await verifyVerification(att)).ok
 - `makeProof({ pubkey, sign, service, handle })` → `{ claim, token, urls, line }`
 - `parseProof(text)` → `{ claim, sig } | null`
 - `verifyProof({ text, pubkey, service, handle })` → `{ ok, reason?, claim? }`
-- `signVerification({ verifierKey, verifierPubkey, sub, service, handle, reveal?, ttlMs?, proofUrl? })` → atestación `op:'verify'`
-- `verifyVerification(att)` → `{ ok, reason? }`
+- `signVerification({ verifierKey, verifierPubkey, sub, service, handle, reveal?, ttlMs?, proofUrl?, aud?, claim?, claims? })` → atestación `op:'verify'`
+- `verifyVerification(att, { audience? })` → `{ ok, reason? }`
 - `proofUrls(service, handle)`, `normHandle(service, handle)`, `isSupportedService(service)`, `SERVICES`
 
-Servicios v1: **`web`** (dominio, prueba en `/.well-known/dotrino.txt`) y **`github`** (README del
-repo de perfil). X/LinkedIn requieren login/scraping → más adelante.
+Servicios: **`web`** (dominio, prueba en `/.well-known/dotrino.txt`), **`github`** (README del
+repo de perfil) y **`directory`** (el directorio de una empresa). X/LinkedIn requieren
+login/scraping → más adelante.
+
+### `directory` no funciona como los otros dos, y conviene ver por qué
+
+En `web` y `github` la prueba es **pública**: cualquiera la baja y comprueba, y el
+verificador solo mira. En `directory` no hay nada que bajar — quien comprueba es el propio
+servicio de la empresa hablando con su Active Directory, y lo que firma es el resultado de
+esa conversación. De ahí las tres diferencias: no tiene `urls`, su atestación dice
+`claim: 'member'` (pertenencia) en vez de `controls`, y lleva `claims` con lo que la
+aplicación necesita para decidir (`upn`, `groups`). Lo usa
+[`dotrino-ad-integration`](https://github.com/imdotrino/dotrino-ad-integration).
+
+### El destinatario (`aud`)
+
+`signVerification({ aud })` marca **para quién** vale una atestación, y
+`verifyVerification(att, { audience })` lo exige. Sin él, un respaldo firmado para el chat
+de la empresa sirve igual ante cualquier otra aplicación que lo acepte — el mismo agujero
+que se cerró en el resto del ecosistema. Y si esperas destinatario, una atestación que no
+lo trae **no vale**: aceptarla es el agujero otra vez.
 
 MIT.

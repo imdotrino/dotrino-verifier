@@ -80,3 +80,61 @@ test('atestación expirada se rechaza', async () => {
   const att = await signVerification({ verifierKey: verifier.privateJwk, verifierPubkey: verifier.pubkey, sub: user.pubkey, service: 'web', handle: 'alice.com', ttlMs: -1000 })
   assert.strictEqual((await verifyVerification(att)).ok, false)
 })
+
+// ----- El directorio de una empresa: pertenencia, no control de un handle -----
+
+test('una atestación de directorio dice a qué grupos perteneces, y para quién vale', async () => {
+  const empresa = await makeDeviceKey({ label: 'servicio de la empresa' })
+  const maria = await makeDeviceKey({ label: 'perfil de trabajo' })
+
+  const att = await signVerification({
+    verifierKey: empresa.privateJwk, verifierPubkey: empresa.publickey,
+    sub: maria.publickey, service: 'directory', claim: 'member',
+    aud: 'https://chat.empresa.com', ttlMs: 60 * 60 * 1000,
+    claims: { upn: 'maria@empresa.com', displayName: 'María Ruiz', groups: ['Ingenieria', 'Todos'] }
+  })
+
+  assert.equal(att.ch, 'directory')
+  assert.equal(att.claim, 'member', 'afirma pertenencia, no control')
+  assert.deepEqual(att.claims.groups, ['Ingenieria', 'Todos'])
+
+  const v = await verifyVerification(att, { audience: 'https://chat.empresa.com' })
+  assert.equal(v.ok, true, v.reason)
+})
+
+test('la atestación de una aplicación no vale en otra', async () => {
+  const empresa = await makeDeviceKey({ label: 'empresa' })
+  const maria = await makeDeviceKey({ label: 'maria' })
+  const att = await signVerification({
+    verifierKey: empresa.privateJwk, verifierPubkey: empresa.publickey, sub: maria.publickey,
+    service: 'directory', claim: 'member', aud: 'https://chat.empresa.com',
+    claims: { upn: 'maria@empresa.com', groups: ['Todos'] }
+  })
+  const v = await verifyVerification(att, { audience: 'https://otra.empresa.com' })
+  assert.equal(v.ok, false)
+  assert.equal(v.reason, 'otro destinatario')
+})
+
+test('si esperas un destinatario, una atestación sin él NO vale', async () => {
+  const empresa = await makeDeviceKey({ label: 'empresa' })
+  const maria = await makeDeviceKey({ label: 'maria' })
+  const att = await signVerification({
+    verifierKey: empresa.privateJwk, verifierPubkey: empresa.publickey, sub: maria.publickey,
+    service: 'directory', claim: 'member', claims: { upn: 'maria@empresa.com' }
+  })
+  assert.equal((await verifyVerification(att, { audience: 'https://chat.empresa.com' })).reason, 'sin destinatario')
+  assert.equal((await verifyVerification(att)).ok, true, 'sin esperar destinatario, sigue valiendo')
+})
+
+test('tocar los grupos invalida la firma', async () => {
+  const empresa = await makeDeviceKey({ label: 'empresa' })
+  const maria = await makeDeviceKey({ label: 'maria' })
+  const att = await signVerification({
+    verifierKey: empresa.privateJwk, verifierPubkey: empresa.publickey, sub: maria.publickey,
+    service: 'directory', claim: 'member', claims: { upn: 'maria@empresa.com', groups: ['Todos'] }
+  })
+  const falsa = { ...att, claims: { ...att.claims, groups: ['Todos', 'Administradores'] } }
+  const v = await verifyVerification(falsa)
+  assert.equal(v.ok, false)
+  assert.match(v.reason, /firma/)
+})

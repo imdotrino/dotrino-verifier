@@ -1,6 +1,6 @@
 {
   "name": "@dotrino/verifier",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Protocolo de verificación de identidad de Dotrino: prueba pública bidireccional (estilo Keybase) + atestación op:'verify' firmada por un verificador-tercero federado. Verificado ≠ revelar.",
   "type": "module",
   "main": "src/index.js",
@@ -16,15 +16,29 @@
     "test": "node --test test/*.test.js",
     "type-check": "tsc --noEmit"
   },
-  "dependencies": {
-    "@dotrino/identity": "0.62.0"
-  },
   "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
   "devDependencies": {
     "typescript": "5.9.3",
-    "@types/node": "^22.0.0"
-  }
+    "@types/node": "^22.0.0",
+    "@dotrino/identity": "0.87.0"
+  },
+  "peerDependencies": {
+    "@dotrino/identity": ">=0.87.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/imdotrino/dotrino-verifier.git"
+  },
+  "author": "seyacat",
+  "keywords": [
+    "dotrino",
+    "identity",
+    "verification",
+    "attestation",
+    "web-of-trust",
+    "active-directory"
+  ]
 }
