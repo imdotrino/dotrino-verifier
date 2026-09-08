@@ -52,9 +52,25 @@ jobs:
         with:
           subject-path: 'sbom-*.cdx.json'
 
-      # La procedencia sale sola: npm la genera y la firma, sin `--provenance`.
+      # ARRANQUE DE UN PAQUETE NUEVO — SE QUITA EN CUANTO 0.2.0 ESTE EN NPM.
+      #
+      # La publicacion de confianza NO puede hacer la PRIMERA publicacion de un paquete: se
+      # declara en los ajustes del paquete, y esos ajustes no existen hasta que el paquete
+      # existe (npm/cli#8544). O sea que la version que crea el paquete necesita un token
+      # si o si.
+      #
+      # Lo que NO cambia es de donde sale: sigue publicando CI, con sus pruebas antes y su
+      # SBOM. Lo unico que se pierde frente al OIDC es que la procedencia no sale sola —
+      # por eso va `--provenance` a mano, que con `id-token: write` funciona igual.
+      #
+      # EN CUANTO 0.2.0 ESTE PUBLICADA: declarar el publicador de confianza en npmjs.com
+      # (repo `imdotrino/dotrino-verifier`, workflow `release.yml`), borrar el secreto
+      # NPM_TOKEN del repo y dejar este paso en `npm publish --access public` a secas, como
+      # el resto del ecosistema.
       - name: Publicar en npm
-        run: npm publish --access public
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - uses: softprops/action-gh-release@v2
         with:
