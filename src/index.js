@@ -96,11 +96,11 @@ export function proofUrls (service, handle) {
  * @returns {Promise<{ claim, token, urls, line }>}  `token`/`line` es lo que se publica.
  */
 export async function makeProof ({ pubkey, sign, service, handle }) {
-  if (!SERVICES[service]) throw new Error('servicio no soportado: ' + service)
-  if (typeof sign !== 'function') throw new Error('falta sign()')
+  if (!SERVICES[service]) throw new Error('unsupported service: ' + service)
+  if (typeof sign !== 'function') throw new Error('sign() is required')
   const claim = { v: 1, sub: await pubkeyId(pubkey), svc: service, handle: normHandle(service, handle), ts: Date.now() }
   const signature = await sign(claim)
-  if (typeof signature !== 'string') throw new Error('sign() debe devolver la firma base64')
+  if (typeof signature !== 'string') throw new Error('sign() must return a base64 signature')
   const token = PROOF_TAG + encJson(claim) + '.' + signature
   return { claim, token, urls: proofUrls(service, handle), line: token }
 }
@@ -137,7 +137,7 @@ export async function verifyProof ({ text, pubkey, service, handle }) {
  * El objeto resultante entra tal cual en `@dotrino/reputation` (mismo formato de firma).
  */
 export async function signVerification ({ verifierKey, verifierPubkey, sub, service, handle, reveal = false, ttlMs = null, proofUrl = null, aud = null, claim = 'controls', claims = null }) {
-  if (!SERVICES[service]) throw new Error('servicio no soportado: ' + service)
+  if (!SERVICES[service]) throw new Error('unsupported service: ' + service)
   const att = { op: 'verify', iss: verifierPubkey, sub, ch: service, claim, ts: Date.now() }
   // PARA QUIÉN vale. Sin destinatario, una atestación firmada para el chat de la empresa
   // sirve igual ante cualquier otra aplicación que la acepte — el mismo agujero que se
