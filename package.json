@@ -21,9 +21,9 @@
     "access": "public"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "@dotrino/identity": "0.109.0",
     "@types/node": "^22.0.0",
-    "@dotrino/identity": "0.87.0"
+    "typescript": "5.9.3"
   },
   "peerDependencies": {
     "@dotrino/identity": ">=0.87.0"
