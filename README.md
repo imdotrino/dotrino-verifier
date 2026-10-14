@@ -53,6 +53,7 @@ const ok = (await verifyVerification(att)).ok
 - `signVerification({ verifierKey, verifierPubkey, sub, service, handle, reveal?, ttlMs?, proofUrl?, aud?, claim?, claims? })` → atestación `op:'verify'`
 - `verifyVerification(att, { audience? })` → `{ ok, reason? }`
 - `proofUrls(service, handle)`, `normHandle(service, handle)`, `isSupportedService(service)`, `SERVICES`
+- `verifyDnsTxt({ domain, expected, resolveTxt? })` → `{ ok, reason? }`: ¿el dominio publica ese registro TXT? (`reason`: `no-record` o `dns-error:<código>`). Lo usa [`dotrino-names`](https://github.com/imdotrino/dotrino-names) para que un dominio real solo lo tenga su dueño.
 
 Servicios: **`web`** (dominio, prueba en `/.well-known/dotrino.txt`), **`github`** (README del
 repo de perfil) y **`directory`** (el directorio de una empresa). X/LinkedIn requieren

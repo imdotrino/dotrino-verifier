@@ -178,3 +178,35 @@ export async function verifyVerification (att, { audience = null, now = Date.now
   const ok = await verifyDeviceSig({ publickey: att.iss, data: body, signature: sig })
   return ok ? { ok: true } : { ok: false, reason: 'firma del verificador inválida' }
 }
+
+// ----- prueba de dominio por DNS (registro TXT) -----
+
+/**
+ * ¿EL DOMINIO PUBLICA ESTE REGISTRO TXT? La prueba de que un dominio es de alguien sin bajar
+ * nada de su web: quien controla el DNS del dominio es quien puede escribir ahí. La usa el
+ * directorio de nombres (`dotrino-names`) para que `empresa.com` solo lo tenga su dueño.
+ *
+ * Mira el DNS PÚBLICO, así que no revela nada que no esté ya a la vista de cualquiera. Lo que
+ * se publica lo decide quien llama (`expected`, p. ej. `dotrino-names=<huella de la cuenta>`):
+ * aquí solo se compara, entero y sin espacios de más.
+ *
+ * `resolveTxt` se inyecta para las pruebas; por defecto es el de `node:dns/promises`. Los
+ * errores del DNS se dicen con su código y no se confunden con «no está»: un dominio que no
+ * existe o que no responde no prueba nada, pero tampoco es lo mismo que un TXT que falta.
+ *
+ * @returns {Promise<{ ok:boolean, reason?:string }>}  `reason`: `no-record` | `dns-error:<código>`
+ */
+export async function verifyDnsTxt ({ domain, expected, resolveTxt = null } = {}) {
+  if (typeof domain !== 'string' || !/^[a-z0-9.-]+$/.test(domain)) throw new Error('verifyDnsTxt: invalid domain')
+  if (typeof expected !== 'string' || !expected) throw new Error('verifyDnsTxt: expected is required')
+  const resolve = resolveTxt || (await import('node:dns/promises')).resolveTxt
+  let records
+  try {
+    records = await resolve(domain)
+  } catch (e) {
+    return { ok: false, reason: 'dns-error:' + (e?.code || 'unknown') }
+  }
+  // Un TXT puede venir partido en trozos de 255 bytes: se unen antes de comparar.
+  const found = (records || []).some((chunks) => (Array.isArray(chunks) ? chunks.join('') : String(chunks)).trim() === expected)
+  return found ? { ok: true } : { ok: false, reason: 'no-record' }
+}

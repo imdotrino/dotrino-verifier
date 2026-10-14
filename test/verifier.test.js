@@ -138,3 +138,14 @@ test('tocar los grupos invalida la firma', async () => {
   assert.equal(v.ok, false)
   assert.match(v.reason, /firma/)
 })
+
+test('verifyDnsTxt: encuentra el registro, aunque venga partido, y distingue «no está» de un fallo del DNS', async () => {
+  const { verifyDnsTxt } = await import('../src/index.js')
+  const expected = 'dotrino-names=abc'
+  const dns = (records) => async () => records
+  assert.deepEqual(await verifyDnsTxt({ domain: 'empresa.com', expected, resolveTxt: dns([['v=spf1 -all'], ['dotrino-', 'names=abc']]) }), { ok: true })
+  assert.deepEqual(await verifyDnsTxt({ domain: 'empresa.com', expected, resolveTxt: dns([['dotrino-names=otro']]) }), { ok: false, reason: 'no-record' })
+  const failing = async () => { throw Object.assign(new Error('x'), { code: 'ENOTFOUND' }) }
+  assert.deepEqual(await verifyDnsTxt({ domain: 'empresa.com', expected, resolveTxt: failing }), { ok: false, reason: 'dns-error:ENOTFOUND' })
+  await assert.rejects(verifyDnsTxt({ domain: 'Empresa com', expected, resolveTxt: dns([]) }))
+})
