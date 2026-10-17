@@ -49,9 +49,9 @@ const ok = (await verifyVerification(att)).ok
 
 - `makeProof({ pubkey, sign, service, handle })` → `{ claim, token, urls, line }`
 - `parseProof(text)` → `{ claim, sig } | null`
-- `verifyProof({ text, pubkey, service, handle })` → `{ ok, reason?, claim? }`
+- `verifyProof({ text, pubkey, service, handle })` → `{ ok, reason?, claim? }` (`reason`: `proof-not-found`, `wrong-service`, `handle-mismatch`, `wrong-identity` o `bad-proof-signature`)
 - `signVerification({ verifierKey, verifierPubkey, sub, service, handle, reveal?, ttlMs?, proofUrl?, aud?, claim?, claims? })` → atestación `op:'verify'`
-- `verifyVerification(att, { audience? })` → `{ ok, reason? }`
+- `verifyVerification(att, { audience? })` → `{ ok, reason? }` (`reason`: `bad-shape`, `no-audience`, `wrong-audience`, `expired` o `bad-verifier-signature`)
 - `proofUrls(service, handle)`, `normHandle(service, handle)`, `isSupportedService(service)`, `SERVICES`
 - `verifyDnsTxt({ domain, expected, resolveTxt? })` → `{ ok, reason? }`: ¿el dominio publica ese registro TXT? (`reason`: `no-record` o `dns-error:<código>`). Lo usa [`dotrino-names`](https://github.com/imdotrino/dotrino-names) para que un dominio real solo lo tenga su dueño.
 

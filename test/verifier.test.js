@@ -112,7 +112,7 @@ test('la atestación de una aplicación no vale en otra', async () => {
   })
   const v = await verifyVerification(att, { audience: 'https://otra.empresa.com' })
   assert.equal(v.ok, false)
-  assert.equal(v.reason, 'otro destinatario')
+  assert.equal(v.reason, 'wrong-audience')
 })
 
 test('si esperas un destinatario, una atestación sin él NO vale', async () => {
@@ -122,7 +122,7 @@ test('si esperas un destinatario, una atestación sin él NO vale', async () => 
     verifierKey: empresa.privateJwk, verifierPubkey: empresa.publickey, sub: maria.publickey,
     service: 'directory', claim: 'member', claims: { upn: 'maria@empresa.com' }
   })
-  assert.equal((await verifyVerification(att, { audience: 'https://chat.empresa.com' })).reason, 'sin destinatario')
+  assert.equal((await verifyVerification(att, { audience: 'https://chat.empresa.com' })).reason, 'no-audience')
   assert.equal((await verifyVerification(att)).ok, true, 'sin esperar destinatario, sigue valiendo')
 })
 
@@ -136,7 +136,7 @@ test('tocar los grupos invalida la firma', async () => {
   const falsa = { ...att, claims: { ...att.claims, groups: ['Todos', 'Administradores'] } }
   const v = await verifyVerification(falsa)
   assert.equal(v.ok, false)
-  assert.match(v.reason, /firma/)
+  assert.match(v.reason, /signature/)
 })
 
 test('verifyDnsTxt: encuentra el registro, aunque venga partido, y distingue «no está» de un fallo del DNS', async () => {

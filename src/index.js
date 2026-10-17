@@ -120,13 +120,13 @@ export function parseProof (text) {
  */
 export async function verifyProof ({ text, pubkey, service, handle }) {
   const p = parseProof(text)
-  if (!p) return { ok: false, reason: 'no se encontró la prueba en la página pública' }
+  if (!p) return { ok: false, reason: 'proof-not-found' }
   const { claim, sig } = p
-  if (claim.svc !== service) return { ok: false, reason: 'la prueba es de otro servicio' }
-  if (normHandle(service, claim.handle) !== normHandle(service, handle)) return { ok: false, reason: 'el handle no coincide' }
-  if (claim.sub !== await pubkeyId(pubkey)) return { ok: false, reason: 'la prueba no es de esta identidad' }
+  if (claim.svc !== service) return { ok: false, reason: 'wrong-service' }
+  if (normHandle(service, claim.handle) !== normHandle(service, handle)) return { ok: false, reason: 'handle-mismatch' }
+  if (claim.sub !== await pubkeyId(pubkey)) return { ok: false, reason: 'wrong-identity' }
   const ok = await verifyDeviceSig({ publickey: pubkey, data: claim, signature: sig })
-  if (!ok) return { ok: false, reason: 'firma de la prueba inválida' }
+  if (!ok) return { ok: false, reason: 'bad-proof-signature' }
   return { ok: true, claim }
 }
 
@@ -164,19 +164,19 @@ export async function signVerification ({ verifierKey, verifierPubkey, sub, serv
  */
 export async function verifyVerification (att, { audience = null, now = Date.now() } = {}) {
   if (!att || att.op !== 'verify' || typeof att.iss !== 'string' || typeof att.sub !== 'string' || typeof att.sig !== 'string') {
-    return { ok: false, reason: 'forma inválida' }
+    return { ok: false, reason: 'bad-shape' }
   }
   // Si la atestación DICE para quién es, quien la recibe tiene que ser ese. Y si él dice
   // quién es y la atestación no lo dice, tampoco vale: aceptar una sin destinatario cuando
   // se esperaba uno es justo el agujero que el destinatario viene a cerrar.
   if (audience != null) {
-    if (typeof att.aud !== 'string' || !att.aud) return { ok: false, reason: 'sin destinatario' }
-    if (att.aud !== String(audience).trim()) return { ok: false, reason: 'otro destinatario' }
+    if (typeof att.aud !== 'string' || !att.aud) return { ok: false, reason: 'no-audience' }
+    if (att.aud !== String(audience).trim()) return { ok: false, reason: 'wrong-audience' }
   }
-  if (att.exp && now > att.exp) return { ok: false, reason: 'expirada' }
+  if (att.exp && now > att.exp) return { ok: false, reason: 'expired' }
   const { sig, ...body } = att
   const ok = await verifyDeviceSig({ publickey: att.iss, data: body, signature: sig })
-  return ok ? { ok: true } : { ok: false, reason: 'firma del verificador inválida' }
+  return ok ? { ok: true } : { ok: false, reason: 'bad-verifier-signature' }
 }
 
 // ----- prueba de dominio por DNS (registro TXT) -----
